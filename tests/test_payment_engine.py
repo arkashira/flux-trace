@@ -1,38 +1,39 @@
-from payment_engine import PaymentEngine, PaymentRequest, PaymentResponse
 import pytest
-from datetime import datetime, timedelta
+from payment_engine import PaymentEngine, Transaction
+import time
 
-def test_submit_payment():
-    payment_engine = PaymentEngine()
-    payment_request = PaymentRequest(100.0, 1)
-    payment_response = payment_engine.submit_payment(payment_request)
-    assert payment_response.transaction_id
-    assert payment_response.settlement_estimate
-    assert payment_engine.get_transaction(payment_response.transaction_id) == {'status': 'pending', 'amount': 100.0}
+def test_process_transaction():
+    engine = PaymentEngine()
+    transaction = Transaction(1, 10.0)
+    engine.process_transaction(transaction)
+    assert len(engine.transactions) == 1
 
-def test_get_transaction():
-    payment_engine = PaymentEngine()
-    payment_request = PaymentRequest(100.0, 1)
-    payment_response = payment_engine.submit_payment(payment_request)
-    transaction = payment_engine.get_transaction(payment_response.transaction_id)
-    assert transaction == {'status': 'pending', 'amount': 100.0}
+def test_get_transaction_latency():
+    engine = PaymentEngine()
+    transaction = Transaction(1, 10.0)
+    engine.process_transaction(transaction)
+    latency = engine.get_transaction_latency(1)
+    assert latency is not None
+    assert latency > 0
 
-def test_settlement_estimate_accuracy():
-    payment_engine = PaymentEngine()
-    payment_request = PaymentRequest(100.0, 1)
-    payment_response = payment_engine.submit_payment(payment_request)
-    settlement_estimate = datetime.strptime(payment_response.settlement_estimate, '%Y-%m-%d')
-    actual_settlement_time = datetime.now() + timedelta(days=3)
-    assert abs((settlement_estimate - actual_settlement_time).days) <= 5
+def test_process_transactions():
+    engine = PaymentEngine()
+    transactions = [Transaction(i, 10.0) for i in range(100)]
+    engine.process_transactions(transactions)
+    assert len(engine.transactions) == 100
 
-def test_submit_payment_edge_case_zero_amount():
-    payment_engine = PaymentEngine()
-    payment_request = PaymentRequest(0.0, 1)
-    with pytest.raises(ValueError):
-        payment_engine.submit_payment(payment_request)
+def test_get_latency_stats():
+    engine = PaymentEngine()
+    transactions = [Transaction(i, 10.0) for i in range(100)]
+    engine.process_transactions(transactions)
+    latency_stats = engine.get_latency_stats()
+    assert latency_stats['99.99th_percentile'] < 5
+    assert latency_stats['average'] < 5
 
-def test_submit_payment_edge_case_negative_amount():
-    payment_engine = PaymentEngine()
-    payment_request = PaymentRequest(-100.0, 1)
-    with pytest.raises(ValueError):
-        payment_engine.submit_payment(payment_request)
+def test_payment_engine_performance():
+    engine = PaymentEngine()
+    transactions = [Transaction(i, 10.0) for i in range(1000)]
+    start_time = time.time()
+    engine.process_transactions(transactions)
+    end_time = time.time()
+    assert end_time - start_time < 10

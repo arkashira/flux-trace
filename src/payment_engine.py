@@ -1,33 +1,38 @@
-import json
+import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Dict
+from typing import List
 
 @dataclass
-class PaymentRequest:
+class Transaction:
+    id: int
     amount: float
-    merchant_id: int
-
-@dataclass
-class PaymentResponse:
-    transaction_id: str
-    settlement_estimate: str
+    timestamp: float = None
 
 class PaymentEngine:
     def __init__(self):
-        self.transactions = {}
+        self.transactions = []
 
-    def submit_payment(self, payment_request: PaymentRequest) -> PaymentResponse:
-        if payment_request.amount <= 0:
-            raise ValueError("Payment amount must be greater than zero")
-        
-        transaction_id = str(datetime.now().timestamp())
-        self.transactions[transaction_id] = {'status': 'pending', 'amount': payment_request.amount}
-        settlement_estimate = (datetime.now() + timedelta(days=3)).strftime('%Y-%m-%d')
-        return PaymentResponse(transaction_id, settlement_estimate)
+    def process_transaction(self, transaction: Transaction):
+        transaction.timestamp = time.time()
+        self.transactions.append(transaction)
 
-    def get_transaction(self, transaction_id: str) -> Dict:
-        return self.transactions.get(transaction_id, {})
+    def get_transaction_latency(self, transaction_id: int):
+        for transaction in self.transactions:
+            if transaction.id == transaction_id:
+                return time.time() - transaction.timestamp
+        return None
 
-def create_payment_engine() -> PaymentEngine:
-    return PaymentEngine()
+    def process_transactions(self, transactions: List[Transaction]):
+        for transaction in transactions:
+            self.process_transaction(transaction)
+
+    def get_latency_stats(self):
+        latencies = []
+        for transaction in self.transactions:
+            latency = self.get_transaction_latency(transaction.id)
+            if latency is not None:
+                latencies.append(latency)
+        return {
+            '99.99th_percentile': sorted(latencies)[int(len(latencies) * 0.9999)] if latencies else 0,
+            'average': sum(latencies) / len(latencies) if latencies else 0
+        }

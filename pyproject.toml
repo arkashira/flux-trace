@@ -5,7 +5,7 @@ build-backend = "poetry.masonry.api"
 [tool.poetry]
 name = "payment-engine"
 version = "1.0.0"
-description = ""
+description = "Payment processing engine"
 
 [tool.poetry.dependencies]
 python = "^3.8"
