@@ -1,2 +1,2 @@
-# flux-trace
-axentx product · {"verdict": "NEW-PRODUCT", "target_project": null}
+# Payment Processor
+A simple payment processor that retries failed payments up to 3 times.
